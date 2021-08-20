@@ -34,11 +34,20 @@ nextApp.prepare().then(async() => {
         })
 
         socket.on("Register", async (playerName: string, gameName: string,callback: any) => {
+            console.log(playerName)
+            console.log(gameName)
+            if(playerName == null || gameName == null) {
+                socket.disconnect()
+            }
             var token = jwt.sign({ playerName: playerName }, process.env.JSON_SECRET);
-            await db.setToken(playerName, gameName, token)
-            callback({
-                token: token
-            })
+            if (await db.setToken(playerName, gameName, token) == false){
+                console.log("set token failed")
+                socket.disconnect()
+            } else {
+                callback({
+                    token: token
+                })
+            }
         })
 
         socket.on("test", (callback: any) => {
