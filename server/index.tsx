@@ -50,13 +50,16 @@ nextApp.prepare().then(async() => {
             }
         })
 
-        socket.on("test", (callback: any) => {
+        socket.on("getPlayerList", async (gameName, callback: any) => {
+            var playerList = await db.getPlayerlist(gameName)
             callback({
-                status: "ok"
+                status: "ok",
+                playerList: playerList
             })
         })
 
-        socket.on("addAI", (callback: any) => {
+        socket.on("addAI", (token, callback: any) => {
+            token = token
             console.log("addAI request")
             callback({
                 status: "not implemented"

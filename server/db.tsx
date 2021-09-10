@@ -38,4 +38,16 @@ export class dbInteraction {
         })
         return update
     }
+
+    async getPlayerlist(gameName: string) {
+        var result = await prisma.player.findMany({
+            where: {
+                gameName: gameName,
+            },
+            select: {
+                name: true,
+            }
+        })
+        return result
+    }
 }
