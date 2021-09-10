@@ -39,6 +39,23 @@ export class dbInteraction {
         return update
     }
 
+    async getToken(playerName: string, gameName: string){
+        var playerID = await this.getPlayerID(playerName, gameName)
+        if (playerID == null) {
+            return false
+        }
+        var token = await prisma.player.findFirst({
+            where: {
+                gameName: gameName,
+                name: playerName
+            },
+            select: {
+                token: true
+            }
+        })
+        return token.token
+    }
+
     async getPlayerlist(gameName: string) {
         var result = await prisma.player.findMany({
             where: {

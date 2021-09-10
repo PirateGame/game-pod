@@ -25,18 +25,23 @@ nextApp.prepare().then(async() => {
     io.attach(server);
 
     io.on('connection', async (socket: socketio.Socket) => {
-        console.log('connection');
-        console.log(socket.id)
-        socket.emit('status', 'Hello from Socket.io');
-
         socket.on('disconnect', () => {
-            console.log('client disconnected');
+            socket.disconnect()
         })
 
+        /*
+        List of functions and what they do.
+        Register:
+            gives player token
+        join: 
+            connects client to room.
+        
+        */
+
         socket.on("Register", async (playerName: string, gameName: string,callback: any) => {
-            console.log(playerName)
-            console.log(gameName)
+            console.log("registering client")
             if(playerName == null || gameName == null) {
+                console.log("null")
                 socket.disconnect()
             }
             var token = jwt.sign({ playerName: playerName }, process.env.JSON_SECRET);
@@ -44,8 +49,26 @@ nextApp.prepare().then(async() => {
                 console.log("set token failed")
                 socket.disconnect()
             } else {
+                //here we can assume that a new player has joined a game so they can update their player list.
+                socket.to(gameName).emit('playerListUpdated')
+                socket.join(gameName)
+                console.log("[INFO] registered client " + playerName)
                 callback({
                     token: token
+                })
+            }
+        })
+
+        socket.on("join", async (playerName: string, gameName: string, token: any, callback: any) => {
+            if ( token == await db.getToken(playerName, gameName)) {
+                socket.join(gameName)
+                console.log("[INFO] connected client " + playerName + " to room " + gameName)
+                callback({
+                    status: true
+                })
+            } else {
+                callback({
+                    status: false
                 })
             }
         })
@@ -58,9 +81,10 @@ nextApp.prepare().then(async() => {
             })
         })
 
-        socket.on("addAI", (token, callback: any) => {
+        socket.on("addAI", (playerName, gameName, token, callback: any) => {
             token = token
-            console.log("addAI request")
+            playerName = playerName
+            console.log("[INFO] added AI to " + gameName)
             callback({
                 status: "not implemented"
             })
