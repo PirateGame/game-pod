@@ -39,9 +39,8 @@ nextApp.prepare().then(async() => {
         */
 
         socket.on("Register", async (playerName: string, gameName: string,callback: any) => {
-            console.log("registering client")
             if(playerName == null || gameName == null) {
-                console.log("null")
+                console.log("no parameters")
                 socket.disconnect()
             }
             var token = jwt.sign({ playerName: playerName }, process.env.JSON_SECRET);
