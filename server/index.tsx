@@ -82,13 +82,17 @@ nextApp.prepare().then(async() => {
         })
 
         socket.on("submitBoard", async (playerName, gameName, board, callback: any) => {
-            playerName = playerName
-            gameName = gameName
-            board = board
-            console.log("[INFO][" + gameName + "][" + playerName + "] saved board ")
-            callback({
-                status: "not implemented"
-            })
+            if (await db.setBoard(playerName, gameName, board) == false){
+                console.log("[ERROR]][" + gameName + "][" + playerName + "] set Board failed ")
+                callback({
+                    status: "Error - Please contact admin"
+                })
+            } else {
+                console.log("[INFO][" + gameName + "][" + playerName + "] set Board ")
+                callback({
+                    status: "ok"
+                })
+            }
         })
 
         socket.on("setTeam", async (playerName, gameName, ship, captain, callback: any) => {

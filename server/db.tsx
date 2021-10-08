@@ -19,21 +19,30 @@ export class dbInteraction {
         if (playerID == null) {
             return false
         }
-        var update = await prisma.game.update({
+        var update = await prisma.player.updateMany({
             where: {
-                name: gameName,
+                gameName: gameName,
+                name: playerName
             },
             data: {
-                players: {
-                    update: {
-                        where: {
-                            id: playerID.id
-                        },
-                        data: {
-                            token: token
-                        }
-                    }
-                }
+                token: token
+            }
+        })
+        return update
+    }
+
+    async setBoard(playerName: string, gameName: string, board: any){
+        var playerID = await this.getPlayerID(playerName, gameName)
+        if (playerID == null) {
+            return false
+        }
+        var update = await prisma.player.updateMany({
+            where: {
+                gameName: gameName,
+                name: playerName
+            },
+            data: {
+                board: board
             }
         })
         return update
@@ -44,22 +53,14 @@ export class dbInteraction {
         if (playerID == null) {
             return false
         }
-        var update = await prisma.game.update({
+        var update = await prisma.player.updateMany({
             where: {
-                name: gameName,
+                gameName: gameName,
+                name: playerName
             },
             data: {
-                players: {
-                    update: {
-                        where: {
-                            id: playerID.id
-                        },
-                        data: {
-                            ship: ship,
-                            captain: captain
-                        }
-                    }
-                }
+                ship: ship,
+                captain: captain,
             }
         })
         return update
@@ -79,6 +80,9 @@ export class dbInteraction {
                 token: true
             }
         })
+        if (!token){
+            return false
+        }
         return token.token
     }
 
