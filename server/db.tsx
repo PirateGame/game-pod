@@ -39,6 +39,32 @@ export class dbInteraction {
         return update
     }
 
+    async setTeam(playerName: string, gameName: string, ship: number, captain: number){
+        var playerID = await this.getPlayerID(playerName, gameName)
+        if (playerID == null) {
+            return false
+        }
+        var update = await prisma.game.update({
+            where: {
+                name: gameName,
+            },
+            data: {
+                players: {
+                    update: {
+                        where: {
+                            id: playerID.id
+                        },
+                        data: {
+                            ship: ship,
+                            captain: captain
+                        }
+                    }
+                }
+            }
+        })
+        return update
+    }
+
     async getToken(playerName: string, gameName: string){
         var playerID = await this.getPlayerID(playerName, gameName)
         if (playerID == null) {

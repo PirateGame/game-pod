@@ -51,7 +51,7 @@ nextApp.prepare().then(async() => {
                 //here we can assume that a new player has joined a game so they can update their player list.
                 socket.to(gameName).emit('playerListUpdated')
                 socket.join(gameName)
-                console.log("[INFO] registered client " + playerName)
+                console.log("[INFO][" + gameName + "][" + playerName + "] registered ")
                 callback({
                     token: token
                 })
@@ -61,7 +61,7 @@ nextApp.prepare().then(async() => {
         socket.on("join", async (playerName: string, gameName: string, token: any, callback: any) => {
             if ( token == await db.getToken(playerName, gameName)) {
                 socket.join(gameName)
-                console.log("[INFO] connected client " + playerName + " to room " + gameName)
+                console.log("[INFO][" + gameName + "][" + playerName + "] Connected to room ")
                 callback({
                     status: true
                 })
@@ -72,18 +72,43 @@ nextApp.prepare().then(async() => {
             }
         })
 
-        socket.on("getPlayerList", async (gameName, callback: any) => {
+        socket.on("getPlayerList", async (playerName, gameName, callback: any) => {
             var playerList = await db.getPlayerlist(gameName)
+            console.log("[INFO][" + gameName + "][" + playerName + "] get player list ")
             callback({
                 status: "ok",
                 playerList: playerList
             })
         })
 
+        socket.on("submitBoard", async (playerName, gameName, board, callback: any) => {
+            playerName = playerName
+            gameName = gameName
+            board = board
+            console.log("[INFO][" + gameName + "][" + playerName + "] saved board ")
+            callback({
+                status: "not implemented"
+            })
+        })
+
+        socket.on("setTeam", async (playerName, gameName, ship, captain, callback: any) => {
+            if (await db.setTeam(playerName, gameName, ship, captain) == false){
+                console.log("[ERROR]][" + gameName + "][" + playerName + "] set Team failed ")
+                callback({
+                    status: "Error - Please contact admin"
+                })
+            } else {
+                console.log("[INFO][" + gameName + "][" + playerName + "] set Team ")
+                callback({
+                    status: "ok"
+                })
+            }
+        })
+
         socket.on("addAI", (playerName, gameName, token, callback: any) => {
             token = token
             playerName = playerName
-            console.log("[INFO] added AI to " + gameName)
+            console.log("[INFO][" + gameName + "][" + playerName + "] added AI")
             callback({
                 status: "not implemented"
             })
