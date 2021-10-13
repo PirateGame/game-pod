@@ -14,6 +14,19 @@ export class dbInteraction {
         return id
     }
 
+    async getPlayerBoard(playerName: string, gameName: string) {
+        var board = await prisma.player.findFirst({
+            where: {
+                name: playerName,
+                gameName: gameName
+            },
+            select: {
+                board: true
+            }
+        })
+        return board
+    }
+
     async setToken(playerName: string, gameName: string, token: string){
         var playerID = await this.getPlayerID(playerName, gameName)
         if (playerID == null) {
@@ -96,5 +109,26 @@ export class dbInteraction {
             }
         })
         return result
+    }
+
+    async getGamelist() {
+        var result = await prisma.game.findMany({
+            select: {
+                name: true,
+            }
+        })
+        return result
+    }
+
+    async setGameState(gameName: string, state: number){
+        var update = await prisma.game.updateMany({
+            where: {
+                name: gameName,
+            },
+            data: {
+                state: state,
+            }
+        })
+        return update
     }
 }

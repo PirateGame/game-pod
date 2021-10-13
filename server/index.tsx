@@ -35,7 +35,6 @@ nextApp.prepare().then(async() => {
             gives player token
         join: 
             connects client to room.
-        
         */
 
         socket.on("Register", async (playerName: string, gameName: string,callback: any) => {
@@ -89,6 +88,7 @@ nextApp.prepare().then(async() => {
                 })
             } else {
                 console.log("[INFO][" + gameName + "][" + playerName + "] set Board ")
+                gameReady(gameName)
                 callback({
                     status: "ok"
                 })
@@ -126,4 +126,30 @@ nextApp.prepare().then(async() => {
     server.listen(port, () => {
         console.log(`> Ready on http://localhost:${port}`);
     });
+
+    // setInterval(function() {
+    //     console.log("running loop")
+        
+    // }, 5000);
+
+    const gameReady = async(gameName: string) => {
+        var ready = true
+        await db.getPlayerlist(gameName).then(async(playerList) => {
+            for (var player = 0;  player < playerList.length; player ++){
+                await db.getPlayerBoard(playerList[player].name, gameName).then((board) => {
+                    if (board == null) {
+                        return
+                    }
+                    if (board.board == 0){
+                        ready = false
+                    }
+                })
+            }
+            if(ready){
+                db.setGameState(gameName, 1)
+                
+                io.to(gameName).emit("gameStateUpdate", 1)
+            }
+        })
+    }
 });
