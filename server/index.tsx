@@ -148,7 +148,7 @@ nextApp.prepare().then(async() => {
             if(ready){
                 db.setGameState(gameName, 1)
                 
-                io.to(gameName).emit("gameStateUpdate", 1)
+                io.in(gameName).emit("gameStateUpdate", 1)
             }
         })
     }
