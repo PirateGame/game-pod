@@ -118,6 +118,16 @@ nextApp.prepare().then(async() => {
             })
         })
 
+        socket.on("startGame", (playerName, gameName, token, callback: any) => {
+            token = token
+            playerName = playerName
+            console.log("[INFO][" + gameName + "][" + playerName + "] started game")
+            start(gameName)
+            callback({
+                status: "ok"
+            })
+        })
+
         
     });
 
@@ -136,7 +146,7 @@ nextApp.prepare().then(async() => {
         var ready = true
         await db.getPlayerlist(gameName).then(async(playerList) => {
             for (var player = 0;  player < playerList.length; player ++){
-                await db.getPlayerBoard(playerList[player].name, gameName).then((board) => {
+                await db.getPlayerBoard(playerList[player], gameName).then((board) => {
                     if (board == null) {
                         return
                     }
@@ -151,5 +161,44 @@ nextApp.prepare().then(async() => {
                 io.in(gameName).emit("gameStateUpdate", 1)
             }
         })
+    }
+
+    const start = (gameName: string) => {
+        io.in(gameName).emit("gameStart", 1)
+        db.setGameTurnNumber(gameName, 1)
+        gameLoop(gameName)
+    }
+
+    const gameLoop = async(gameName: string) => {
+        var playerList = await db.getPlayerlist(gameName)
+        for (let i = playerList.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [playerList[i], playerList[j]] = [playerList[j], playerList[i]];
+        }
+
+        var queue = await db.getGameQueue(gameName)
+
+        if (Object.keys(queue).length < 1) {
+            var turn = await db.getGameTurn(gameName)
+            turn += 1
+            var maxTurns = await db.getGameSizeX(gameName) * await db.getGameSizeY(gameName)
+            if (turn > maxTurns) {
+                //end game
+            } else {
+                db.setGameTurn(gameName, turn)
+                for (let i = 0; i < playerList.length -1; i++) {
+                    var board = db.getPlayerBoard(playerList[i], gameName)
+                    console.log(board)
+                    //work out what needs to go into queue
+                }
+            }
+
+            //if turn > max turns end game.
+        } else {
+            //var task = queue.0
+            //if (task.type == "question"){
+
+            //}
+        }
     }
 });

@@ -108,7 +108,12 @@ export class dbInteraction {
                 name: true,
             }
         })
-        return result
+        var out = []
+        for(var i=0; i < result.length; i ++) {
+            out.push(result[i].name)
+        }
+        console.log(out)
+        return out
     }
 
     async getGamelist() {
@@ -130,5 +135,77 @@ export class dbInteraction {
             }
         })
         return update
+    }
+
+    async setGameTurnNumber(gameName: string, turn: number){
+        var update = await prisma.game.updateMany({
+            where: {
+                name: gameName,
+            },
+            data: {
+                turnNumber: turn,
+            }
+        })
+        return update
+    }
+
+    async getGameSizeX(gameName: string) {
+        var result = await prisma.game.findMany({
+            where: {
+                name: gameName,
+            },
+            select: {
+                sizeX: true,
+            }
+        })
+        return result[0].sizeX
+    }
+    
+    async getGameSizeY(gameName: string) {
+        var result = await prisma.game.findMany({
+            where: {
+                name: gameName,
+            },
+            select: {
+                sizeY: true,
+            }
+        })
+        return result[0].sizeY
+    }
+
+    async getGameQueue(gameName: string) {
+        var result = await prisma.game.findMany({
+            where: {
+                name: gameName,
+            },
+            select: {
+                queue: true,
+            }
+        })
+        return result[0]
+    }
+
+    async getGameTurn(gameName: string) {
+        var result = await prisma.game.findMany({
+            where: {
+                name: gameName,
+            },
+            select: {
+                turnNumber: true,
+            }
+        })
+        return result[0].turnNumber
+    }
+
+    async setGameTurn(gameName: string, turn: number) {
+        var result = await prisma.game.updateMany({
+            where: {
+                name: gameName,
+            },
+            data: {
+                turnNumber: turn,
+            }
+        })
+        return result
     }
 }

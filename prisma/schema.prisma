@@ -33,8 +33,9 @@ model game {
   decisionTime  Int
   turnNumber    Int
   tiles         Json
-  chosenTiles   Json
+  tilesRemaining   Json
   scoreHistory  Json
+  queue         Json
   playerLimit   Int
   randomiseOnly Boolean
   state         Int
