@@ -173,7 +173,19 @@ export class dbInteraction {
                 queue: true,
             }
         })
-        return result[0].queue as object
+        return result[0].queue
+    }
+
+    async setGameQueue(gameName: string, queue: object){
+        var update = await prisma.game.updateMany({
+            where: {
+                name: gameName,
+            },
+            data: {
+                queue: queue,
+            }
+        })
+        return update
     }
 
     async getGameTurn(gameName: string) {
@@ -186,6 +198,18 @@ export class dbInteraction {
             }
         })
         return result[0].turnNumber
+    }
+
+    async getGameDecisionTime(gameName: string) {
+        var result = await prisma.game.findMany({
+            where: {
+                name: gameName,
+            },
+            select: {
+                decisionTime: true,
+            }
+        })
+        return result[0].decisionTime
     }
 
     async setGameTurn(gameName: string, turn: number) {
