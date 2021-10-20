@@ -126,6 +126,27 @@ nextApp.prepare().then(async() => {
             start(gameName)
         })
 
+        socket.on("questionResponse", async(playerName, gameName, option) => {
+            console.log("[INFO][" + gameName + "][" + playerName + "] received option.")
+            
+            var queue = await db.getGameQueue(gameName) as object[]
+
+            for (var i in queue) {
+                //only one task should be open for player.
+                //but this will probably choose the first task.
+                var task: task = queue[i]
+                if (task.playerName == playerName) {
+                    task.response = option
+                }
+                queue[i] = task
+                break
+            }
+
+            await db.setGameQueue(gameName, queue)
+
+
+        })
+
         
     });
 
@@ -133,12 +154,7 @@ nextApp.prepare().then(async() => {
 
     server.listen(port, () => {
         console.log(`> Ready on http://localhost:${port}`);
-    });
-
-    // setInterval(function() {
-    //     console.log("running loop")
-        
-    // }, 5000);
+    });    
 
     const gameReady = async(gameName: string) => {
         var ready = true
@@ -281,20 +297,20 @@ nextApp.prepare().then(async() => {
                                 })
                             } else if (board[tile].content = "D"){
                                 //Skull and Crossbones
-                                var data = {"title": "You get to skull and crossbones this turn"}
+                                var data = {"title": "Skull and cross bones not implemented"}
                                 io.in(gameName + playerList[i]).emit("event", data)
-                                addToQueue(gameName, {
-                                    playerName: playerList[i],
-                                    type: "D",
-                                    mirrored: 0,
-                                    shielded: false,
-                                    target: "",
-                                    title: "which team do you want to kill?",
-                                    timeout: Date.now() + decisionTime,
-                                    response: null,
-                                    emitted: false,
-                                    options: ["1", "2", "3", "A", "B", "C"]
-                                })
+                                // addToQueue(gameName, {
+                                //     playerName: playerList[i],
+                                //     type: "D",
+                                //     mirrored: 0,
+                                //     shielded: false,
+                                //     target: "",
+                                //     title: "which team do you want to kill?",
+                                //     timeout: Date.now() + decisionTime,
+                                //     response: null,
+                                //     emitted: false,
+                                //     options: ["1", "2", "3", "A", "B", "C"]
+                                // })
                             } else if (board[tile].content = "E"){
                                 //Swap
                                 var data = {"title": "You get to swap with someone this turn"}
@@ -369,6 +385,7 @@ nextApp.prepare().then(async() => {
                 return
             }
             if (task.emitted == false) {
+                console.log("emitting question")
                 io.in(gameName + task.playerName).emit("question",task.title, task.options)
             } else if (task.response != null){
                 //we have an answer.
@@ -619,7 +636,6 @@ nextApp.prepare().then(async() => {
                     db.setGameQueue(gameName, queue)
                 }
 
-
             } else if(task.timeout < Date.now()) {
                 var choice = task.options[Math.floor(Math.random() * task.options.length)]
                 task.response = choice;
@@ -627,13 +643,18 @@ nextApp.prepare().then(async() => {
                     //allow clients to move to next page.
                     gameLoop(gameName)
                 }, 1000);
+                return
             } else {
                 //nothing to do, try again in 5 seconse
                 setTimeout(function (){
                     gameLoop(gameName)
                 }, 5000);
+                return
             }
         }
+        setTimeout(function (){
+            gameLoop(gameName)
+        }, 5000);
     }
 
     const addToQueue = async (gameName: string, element: object) => {
@@ -645,5 +666,10 @@ nextApp.prepare().then(async() => {
 
         await db.setGameQueue(gameName, queue)
 
+    }
+
+    var games = await db.getGamelist()
+    for (var i in games) {
+        gameLoop(games[i].name)
     }
 });
