@@ -1,7 +1,7 @@
 import prisma from '../lib/prisma'
 
 export class dbInteraction {
-    async getPlayerID(playerName: string, gameName: string) {
+    async getPlayerID(gameName: string, playerName: string) {
         var id = await prisma.player.findFirst({
             where: {
                 name: playerName,
@@ -14,7 +14,7 @@ export class dbInteraction {
         return id
     }
 
-    async getPlayerBoard(playerName: string, gameName: string) {
+    async getPlayerBoard(gameName: string, playerName: string) {
         var board = await prisma.player.findMany({
             where: {
                 name: playerName,
@@ -30,8 +30,8 @@ export class dbInteraction {
         return board[0].board
     }
 
-    async setToken(playerName: string, gameName: string, token: string){
-        var playerID = await this.getPlayerID(playerName, gameName)
+    async setToken(gameName: string, playerName: string, token: string){
+        var playerID = await this.getPlayerID(gameName, playerName)
         if (playerID == null) {
             return false
         }
@@ -47,7 +47,7 @@ export class dbInteraction {
         return update
     }
 
-    async setBoard(playerName: string, gameName: string, board: any){
+    async setBoard(gameName: string, playerName: string, board: any){
         var update = await prisma.player.updateMany({
             where: {
                 gameName: gameName,
@@ -60,7 +60,7 @@ export class dbInteraction {
         return update
     }
 
-    async setTeam(playerName: string, gameName: string, ship: number, captain: number){
+    async setTeam(gameName: string, playerName: string, ship: number, captain: number){
         var update = await prisma.player.updateMany({
             where: {
                 gameName: gameName,
@@ -74,7 +74,7 @@ export class dbInteraction {
         return update
     }
 
-    async getToken(playerName: string, gameName: string){
+    async getToken(gameName: string, playerName: string){
         var token = await prisma.player.findFirst({
             where: {
                 gameName: gameName,
@@ -224,13 +224,25 @@ export class dbInteraction {
         return result
     }
 
-    async setGameCurrentTile(gameName: string, tile: object) {
+    async setGameCurrentTile(gameName: string, tile: number) {
         var result = await prisma.game.updateMany({
             where: {
                 name: gameName,
             },
             data: {
                 currentTile: tile,
+            }
+        })
+        return result
+    }
+
+    async setGameTilesRemaining(gameName: string, tiles: object) {
+        var result = await prisma.game.updateMany({
+            where: {
+                name: gameName,
+            },
+            data: {
+                tilesRemaining: tiles,
             }
         })
         return result
@@ -245,10 +257,7 @@ export class dbInteraction {
                 tilesRemaining: true,
             }
         })
-        if (res == null || res == undefined) {
-            return
-        }
-        return res.tilesRemaining.tiles
+        return res.tilesRemaining
     }
 
     async getPlayerMoney(gameName: string, playerName: string) {
@@ -267,7 +276,7 @@ export class dbInteraction {
         return res.money
     }
 
-    async setPlayerMoney(playerName: string, gameName: string, money: any){
+    async setPlayerMoney(gameName: string, playerName: string, money: any){
         var update = await prisma.player.updateMany({
             where: {
                 gameName: gameName,
@@ -296,7 +305,7 @@ export class dbInteraction {
         return res.bank
     }
 
-    async setPlayerBank(playerName: string, gameName: string, bank: any){
+    async setPlayerBank(gameName: string, playerName: string, bank: any){
         var update = await prisma.player.updateMany({
             where: {
                 gameName: gameName,
@@ -325,7 +334,7 @@ export class dbInteraction {
         return res.mirror
     }
 
-    async setPlayerMirror(playerName: string, gameName: string, mirror: any){
+    async setPlayerMirror(gameName: string, playerName: string, mirror: any){
         var update = await prisma.player.updateMany({
             where: {
                 gameName: gameName,
@@ -354,7 +363,7 @@ export class dbInteraction {
         return res.shield
     }
 
-    async setPlayerShield(playerName: string, gameName: string, shield: any){
+    async setPlayerShield(gameName: string, playerName: string, shield: any){
         var update = await prisma.player.updateMany({
             where: {
                 gameName: gameName,
