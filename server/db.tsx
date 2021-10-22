@@ -103,7 +103,6 @@ export class dbInteraction {
         for(var i=0; i < result.length; i ++) {
             out.push(result[i].name)
         }
-        console.log(out)
         return out
     }
 

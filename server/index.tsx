@@ -191,7 +191,7 @@ nextApp.prepare().then(async() => {
 
     const gameLoop = async(gameName: string) => {
         var playerList = await db.getPlayerlist(gameName)
-        for (let i = playerList.length - 1; i > 0; i--) {
+        for (var i = playerList.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
             [playerList[i], playerList[j]] = [playerList[j], playerList[i]];
         }
@@ -211,7 +211,6 @@ nextApp.prepare().then(async() => {
             } else {
                 //choose new tile.
                 var tilesRemaining: number[] = await db.getGameTilesRemaining(gameName)
-                console.log(tilesRemaining)
 
                 if (tilesRemaining == undefined) {
                     console.log("[ERROR]][" + gameName + "] tilesRemaing Not found")
@@ -226,7 +225,10 @@ nextApp.prepare().then(async() => {
                 await db.setGameTilesRemaining(gameName, tilesRemaining)
 
                 await db.setGameTurn(gameName, turn)
-                for (let i = 0; i < playerList.length; i++) {
+                console.log(playerList.length)
+                //This doesn't iterate
+                for (var i = 0; i < playerList.length; i++) {
+                    console.log(i)
                     var board: any = await db.getPlayerBoard(gameName, playerList[i])
                     if (board == null || board == undefined){
                         console.log("[ERROR]][" + gameName + "][" + playerList[i] + "] Board Not found")
@@ -241,8 +243,6 @@ nextApp.prepare().then(async() => {
 
                             var enemyList = playerList
                             enemyList.splice(enemyList.indexOf(playerList[i]), 1)
-
-                            console.log(board[tile].content)
 
                             if(money == undefined || bank == undefined || shield == undefined || mirror == undefined) {
                                 console.log("[ERROR][" + gameName + "][" + playerList[i] + "] Could not find all player data")
@@ -396,6 +396,7 @@ nextApp.prepare().then(async() => {
                         }
                     }
                 }
+            console.log("loop finished")
             }
 
         } else {
