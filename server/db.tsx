@@ -1,3 +1,4 @@
+//This should be .jsx for server and .tsx for dev env
 import prisma from '../lib/prisma.jsx'
 
 export class dbInteraction {

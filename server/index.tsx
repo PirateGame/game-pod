@@ -3,6 +3,8 @@ import express, { Express } from 'express';
 import * as http from 'http';
 import next, { NextApiHandler } from 'next';
 import * as socketio from 'socket.io';
+
+//This should be .jsx for server and .tsx for dev env
 import { dbInteraction } from "./db.jsx";
 var jwt=require('jsonwebtoken');
 
@@ -528,12 +530,12 @@ nextApp.prepare().then(async() => {
                     //action blocked.
 
                     if (task.mirrored % 2 == 0) {
-                        var shield = await db.getPlayerShield(gameName, task.initiator)
+                        var shield = await db.getPlayerShield(gameName, task.target)
                         if (shield == null) {
                             return
                         }
                         shield -= 1
-                        db.setPlayerShield(gameName, task.initiator, shield)
+                        db.setPlayerShield(gameName, task.target, shield)
 
                         var data = {"title": "You used a shield to block " + task.initiator}
                         io.in(gameName + task.target).emit("event", data)
@@ -542,12 +544,12 @@ nextApp.prepare().then(async() => {
 
 
                     } else {
-                        var shield = await db.getPlayerShield(gameName, task.target)
+                        var shield = await db.getPlayerShield(gameName, task.initiator)
                         if (shield == null) {
                             return
                         }
                         shield -= 1
-                        db.setPlayerShield(gameName, task.target, shield)
+                        db.setPlayerShield(gameName, task.initiator, shield)
 
                         var data = {"title": "You used a shield to block " + task.target}
                         io.in(gameName + task.initiator).emit("event", data)
