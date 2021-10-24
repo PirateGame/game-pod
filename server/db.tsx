@@ -1,4 +1,4 @@
-import prisma from '../lib/prisma'
+import prisma from '../lib/prisma.jsx'
 
 export class dbInteraction {
     async getPlayerID(gameName: string, playerName: string) {
@@ -257,6 +257,18 @@ export class dbInteraction {
             }
         })
         return res.tilesRemaining
+    }
+
+    async getGameState(gameName: string) {
+        var res: any = await prisma.game.findFirst({
+            where: {
+                name: gameName,
+            },
+            select: {
+                state: true,
+            }
+        })
+        return res.state
     }
 
     async getPlayerMoney(gameName: string, playerName: string) {

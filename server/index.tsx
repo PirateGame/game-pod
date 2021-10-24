@@ -3,7 +3,7 @@ import express, { Express } from 'express';
 import * as http from 'http';
 import next, { NextApiHandler } from 'next';
 import * as socketio from 'socket.io';
-import { dbInteraction } from "./db";
+import { dbInteraction } from "./db.jsx";
 var jwt=require('jsonwebtoken');
 
 let db = new dbInteraction();
@@ -731,6 +731,9 @@ nextApp.prepare().then(async() => {
 
     var games = await db.getGamelist()
     for (var i in games) {
-        gameLoop(games[i].name)
+        var gameState = await db.getGameState(games[i].name)
+        if (gameState == 1) {
+            gameLoop(games[i].name)
+        }
     }
 });
