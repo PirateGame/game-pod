@@ -5,7 +5,7 @@ import next, { NextApiHandler } from 'next';
 import * as socketio from 'socket.io';
 
 //This should be .jsx for server and .tsx for dev env
-import { dbInteraction } from "./db.jsx";
+import { dbInteraction } from './db';
 var jwt=require('jsonwebtoken');
 
 let db = new dbInteraction();

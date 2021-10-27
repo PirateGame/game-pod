@@ -1,5 +1,5 @@
 //This should be .jsx for server and .tsx for dev env
-import prisma from '../lib/prisma.jsx'
+import prisma from '../lib/prisma'
 
 export class dbInteraction {
     async getPlayerID(gameName: string, playerName: string) {
