@@ -465,65 +465,89 @@ nextApp.prepare().then(async() => {
                         //mirrored even number of times, so performed on target
                         if (task.type == "A") {
                             //rob
-                            var ownerMoney = await db.getPlayerMoney(gameName, task.initiator)
+                            var initiatorMoney = await db.getPlayerMoney(gameName, task.initiator)
                             var targetMoney = await db.getPlayerMoney(gameName, task.target)
-                            if (targetMoney == null || ownerMoney == null) {
+                            if (targetMoney == null || initiatorMoney == null) {
                                 return
                             }
-                            ownerMoney += targetMoney
+                            initiatorMoney += targetMoney
                             targetMoney = 0
-                            await db.setPlayerMoney(gameName, task.initiator, ownerMoney)
+                            await db.setPlayerMoney(gameName, task.initiator, initiatorMoney)
                             await db.setPlayerMoney(gameName, task.target, targetMoney)
+                            var data = {"title": "You robbed " + task.target}
+                            io.in(gameName + task.initiator).emit("event", data)
+                            var data = {"title": "You were robbed by " + task.initiator}
+                            io.in(gameName + task.target).emit("event", data)
                         } else if (task.type == "B") {
                             //kill
                             await db.setPlayerMoney(gameName, task.target, 0)
+                            var data = {"title": "You killed " + task.target}
+                            io.in(gameName + task.initiator).emit("event", data)
+                            var data = {"title": "You were killed by " + task.initiator}
+                            io.in(gameName + task.target).emit("event", data)
                         } else if (task.type == "D") {
                             //scull and crossbones
                             return
                         } else if (task.type == "E") {
                             //swap
-                            var ownerMoney = await db.getPlayerMoney(gameName, task.initiator)
+                            var initiatorMoney = await db.getPlayerMoney(gameName, task.initiator)
                             var targetMoney = await db.getPlayerMoney(gameName, task.target)
-                            if (targetMoney == null || ownerMoney == null) {
+                            if (targetMoney == null || initiatorMoney == null) {
                                 return
                             }
                             var middle: number = targetMoney
-                            targetMoney = ownerMoney
-                            ownerMoney = middle
-                            await db.setPlayerMoney(gameName, task.initiator, ownerMoney)
+                            targetMoney = initiatorMoney
+                            initiatorMoney = middle
+                            await db.setPlayerMoney(gameName, task.initiator, initiatorMoney)
                             await db.setPlayerMoney(gameName, task.target, targetMoney)
+                            var data = {"title": "You swapped with " + task.target}
+                            io.in(gameName + task.initiator).emit("event", data)
+                            var data = {"title": "You swapped with " + task.initiator}
+                            io.in(gameName + task.target).emit("event", data)
                         }
                     } else {
-                        //mirrored odd number of times, so performed on owner
+                        //mirrored odd number of times, so performed on initiator
                         if (task.type == "A") {
                             //rob
-                            var ownerMoney = await db.getPlayerMoney(gameName, task.initiator)
+                            var initiatorMoney = await db.getPlayerMoney(gameName, task.initiator)
                             var targetMoney = await db.getPlayerMoney(gameName, task.target)
-                            if (targetMoney == null || ownerMoney == null) {
+                            if (targetMoney == null || initiatorMoney == null) {
                                 return
                             }
-                            targetMoney += ownerMoney
-                            ownerMoney = 0
-                            await db.setPlayerMoney(gameName, task.initiator, ownerMoney)
+                            targetMoney += initiatorMoney
+                            initiatorMoney = 0
+                            await db.setPlayerMoney(gameName, task.initiator, initiatorMoney)
                             await db.setPlayerMoney(gameName, task.target, targetMoney)
+                            var data = {"title": "You were robbed by " + task.target}
+                            io.in(gameName + task.initiator).emit("event", data)
+                            var data = {"title": "You robbed " + task.initiator}
+                            io.in(gameName + task.target).emit("event", data)
                         } else if (task.type == "B") {
                             //kill
                             await db.setPlayerMoney(gameName, task.initiator, 0)
+                            var data = {"title": "You were killed by " + task.target}
+                            io.in(gameName + task.initiator).emit("event", data)
+                            var data = {"title": "You killed " + task.initiator}
+                            io.in(gameName + task.target).emit("event", data)
                         } else if (task.type == "D") {
                             //scull and crossbones
                             return
                         } else if (task.type == "E") {
                             //swap
-                            var ownerMoney = await db.getPlayerMoney(gameName, task.initiator)
+                            var initiatorMoney = await db.getPlayerMoney(gameName, task.initiator)
                             var targetMoney = await db.getPlayerMoney(gameName, task.target)
-                            if (targetMoney == null || ownerMoney == null) {
+                            if (targetMoney == null || initiatorMoney == null) {
                                 return
                             }
                             var middle: number = targetMoney
-                            targetMoney = ownerMoney
-                            ownerMoney = middle
-                            await db.setPlayerMoney(gameName, task.initiator, ownerMoney)
+                            targetMoney = initiatorMoney
+                            initiatorMoney = middle
+                            await db.setPlayerMoney(gameName, task.initiator, initiatorMoney)
                             await db.setPlayerMoney(gameName, task.target, targetMoney)
+                            var data = {"title": "You swapped with " + task.target}
+                            io.in(gameName + task.initiator).emit("event", data)
+                            var data = {"title": "You swapped with " + task.initiator}
+                            io.in(gameName + task.target).emit("event", data)
                         }
                     }
                 } else if (task.response == "Shield") {
