@@ -24,6 +24,10 @@ interface task {
     emitted?: boolean,
 }
 
+interface score {
+    [key: string]: string | number
+}
+
 
 if (process.env.PORT) {
     var port: number = parseInt(process.env.PORT);
@@ -206,6 +210,21 @@ nextApp.prepare().then(async() => {
 
         if (queue.length < 1) {
             var turn = await db.getGameTurn(gameName)
+
+            //write scores to db
+            var scores: score = {}
+            for (var i = 0; i < playerList.length; i++) {
+                var money = await db.getPlayerMoney(gameName, playerList[i])
+                var bank = await db.getPlayerBank(gameName, playerList[i])
+                if (money == undefined || bank == undefined) {
+                    console.log("[ERROR]][" + gameName + "] saving scores to db")
+                    return
+                }
+                scores[playerList[i]] = money + bank
+            }
+
+            addToScoreHistory(gameName, turn, scores)
+
             turn += 1
             await db.setGameTurn(gameName, turn)
             var maxTurns = await db.getGameSizeX(gameName) * await db.getGameSizeY(gameName)
@@ -755,10 +774,21 @@ nextApp.prepare().then(async() => {
         return
     }
 
+    const addToScoreHistory = async (gameName: string, turnNumber: number, element: object) => {
+        var score = await db.getGameScoreHistory(gameName) as object[]
+        if (score == null || score == undefined) {
+            return
+        }
+        score[turnNumber] = element
+
+        await db.setGameScoreHistory(gameName, score)
+        return
+    }
+
     var games = await db.getGamelist()
     for (var i in games) {
         var gameState = await db.getGameState(games[i].name)
-        if (gameState == 1) {
+        if (gameState == 2) {
             gameLoop(games[i].name)
         }
     }

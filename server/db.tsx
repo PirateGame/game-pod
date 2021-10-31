@@ -188,6 +188,31 @@ export class dbInteraction {
         return update
     }
 
+    async getGameScoreHistory(gameName: string) {
+        var result = await prisma.game.findMany({
+            where: {
+                name: gameName,
+            },
+            select: {
+                scoreHistory: true,
+            }
+        })
+        return result[0].scoreHistory
+    }
+
+    async setGameScoreHistory(gameName: string, scoreHistory: object){
+        var update = await prisma.game.updateMany({
+            where: {
+                name: gameName,
+            },
+            data: {
+                scoreHistory: scoreHistory,
+            }
+        })
+        return update
+    }
+
+
     async getGameTurn(gameName: string) {
         var result = await prisma.game.findMany({
             where: {
