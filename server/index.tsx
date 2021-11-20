@@ -198,6 +198,11 @@ nextApp.prepare().then(async() => {
 
     const gameLoop = async(gameName: string) => {
         var playerList = await db.getPlayerlist(gameName)
+        //if playerlist empty assume game has been deleted. so stop
+        if(playerList == []) {
+            console.log("[WARN][" + gameName + "] Appears to have been deleted")
+            return
+        }
         for (var i = playerList.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
             [playerList[i], playerList[j]] = [playerList[j], playerList[i]];
