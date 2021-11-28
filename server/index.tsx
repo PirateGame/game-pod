@@ -5,7 +5,7 @@ import next, { NextApiHandler } from 'next';
 import * as socketio from 'socket.io';
 
 //This should be .jsx for server and empty for dev env
-import { dbInteraction } from './db.jsx';
+import { dbInteraction } from './db';
 var jwt=require('jsonwebtoken');
 
 let db = new dbInteraction();
@@ -22,6 +22,10 @@ interface task {
     mirrored?: number,
     shielded?: boolean,
     emitted?: boolean,
+}
+
+interface tileQueue {
+    tile: number
 }
 
 interface score {
@@ -222,7 +226,7 @@ nextApp.prepare().then(async() => {
                 var money = await db.getPlayerMoney(gameName, playerList[i])
                 var bank = await db.getPlayerBank(gameName, playerList[i])
                 if (money == undefined || bank == undefined) {
-                    console.log("[ERROR]][" + gameName + "] saving scores to db")
+                    console.log("[ERROR][1][" + gameName + "] saving scores to db")
                     return
                 }
                 scores[playerList[i]] = money + bank
@@ -236,30 +240,45 @@ nextApp.prepare().then(async() => {
             if (turn > maxTurns + 1) { //need to do the last turn.
                 var data = {"title": "Game Over."}
                 io.in(gameName).emit("event", data)
+                console.log("[INFO]][" + gameName + "] Finished")
                 return
             } else {
-                //choose new tile.
+                var tileQueue = await db.getGameQueue(gameName) as object[]
                 var tilesRemaining: number[] = await db.getGameTilesRemaining(gameName)
+                var currentTile: number
 
-                if (tilesRemaining == undefined) {
-                    console.log("[ERROR]][" + gameName + "] tilesRemaing Not found")
-                    return
+                if (tileQueue.length > 0) {
+                    //tile in queue
+                    console.log("using tile from queue")
+                    var temp = tileQueue[0] as tileQueue
+                    currentTile = temp.tile
+
+                    tileQueue.shift()
+
+                    await db.setGameTileQueue(gameName, tileQueue)
+
+                } else {
+                    //choose new tile.
+                    if (tilesRemaining == undefined) {
+                        console.log("[ERROR][2][" + gameName + "] tilesRemaing Not found")
+                        return
+                    }
+                    currentTile = tilesRemaining[Math.floor(Math.random() * tilesRemaining.length)]
+
+                    tilesRemaining.splice(tilesRemaining.indexOf(currentTile), 1)
+
+                    await db.setGameTilesRemaining(gameName, tilesRemaining)
                 }
-                var currentTile = tilesRemaining[Math.floor(Math.random() * tilesRemaining.length)]
+                
                 console.log("[Info][" + gameName + "] " + currentTile)
-
-                tilesRemaining.splice(tilesRemaining.indexOf(currentTile), 1)
+               
 
                 await db.setGameCurrentTile(gameName, currentTile)
-                await db.setGameTilesRemaining(gameName, tilesRemaining)
-
-                await db.setGameTurn(gameName, turn)
 
                 for (var i = 0; i < playerList.length; i++) {
                     var board: any = await db.getPlayerBoard(gameName, playerList[i])
-                    if (board == null || board == undefined){
-                        console.log("[ERROR]][" + gameName + "][" + playerList[i] + "] Board Not found")
-                        return
+                    if (board == null || board == undefined) {
+                        console.log("[ERROR][3][" + gameName + "][" + playerList[i] + "] Board Not found")
                     }
                     for (var tile = 0; tile < board.length; tile ++) {
                         if (board[tile].id == currentTile) {
@@ -273,8 +292,9 @@ nextApp.prepare().then(async() => {
 
                             enemyList.splice(i,1)
 
-                            if(money == undefined || bank == undefined || shield == undefined || mirror == undefined) {
-                                console.log("[ERROR][" + gameName + "][" + playerList[i] + "] Could not find all player data")
+
+                            if (money == undefined || bank == undefined || shield == undefined || mirror == undefined) {
+                                console.log("[ERROR][4][" + gameName + "][" + playerList[i] + "] Could not find all player data")
                                 return
                             }
 
@@ -450,8 +470,9 @@ nextApp.prepare().then(async() => {
             var task: task = queue[0] as task
             queue.shift()
             await db.setGameQueue(gameName, queue)
+
             if(task.timeout == null || task.options == null || task.mirrored == null || task.initiator == null || task.target == null) {
-                console.log("[ERROR][" + gameName + "] + task did not have all data")
+                console.log("[ERROR][5][" + gameName + "] + task did not have all data")
                 return
             }
             if (task.emitted == false) {
@@ -469,7 +490,9 @@ nextApp.prepare().then(async() => {
                 if (task.type == "Present") {
                     //Present
                     var money = await db.getPlayerMoney(gameName, task.response)
-                    if(money == null) {
+                    if (money == undefined || money == null) {
+                        console.log("[ERROR][6][" + gameName + "] player money Null")
+                        console.log(task.response)
                         return
                     }
                     money += 1000
@@ -480,8 +503,12 @@ nextApp.prepare().then(async() => {
                     io.in(gameName + task.response).emit("event", data)
 
                 } else if (task.type == "Choose Next Tile") {
-                    //next tile
-                    //add next tile to list.
+                    console.log("adding tile to queue")
+                    await addToTileQueue(gameName, {tile: parseInt(task.response)})
+                    var tilesRemaining: number[] = await db.getGameTilesRemaining(gameName)
+                    tilesRemaining.splice(tilesRemaining.indexOf(parseInt(task.response)), 1)
+
+                    await db.setGameTilesRemaining(gameName, tilesRemaining)
 
                 } else if (task.response == "Do Nothing") {
                     //this means we can perform the action.
@@ -492,8 +519,10 @@ nextApp.prepare().then(async() => {
                             var initiatorMoney = await db.getPlayerMoney(gameName, task.initiator)
                             var targetMoney = await db.getPlayerMoney(gameName, task.target)
                             if (targetMoney == null || initiatorMoney == null) {
+                                console.log("[ERROR][7][" + gameName + "] item null")
                                 return
                             }
+
                             initiatorMoney += targetMoney
                             targetMoney = 0
                             await db.setPlayerMoney(gameName, task.initiator, initiatorMoney)
@@ -511,12 +540,15 @@ nextApp.prepare().then(async() => {
                             io.in(gameName + task.target).emit("event", data)
                         } else if (task.type == "Skull and Crossbones") {
                             //skull and crossbones
-                            return
+                            console.log("[ERROR][8][" + gameName + "] Team task not implememted")
                         } else if (task.type == "Swap") {
                             //swap
                             var initiatorMoney = await db.getPlayerMoney(gameName, task.initiator)
                             var targetMoney = await db.getPlayerMoney(gameName, task.target)
                             if (targetMoney == null || initiatorMoney == null) {
+                                console.log("[ERROR][9][" + gameName + "] items null")
+                                console.log(task.target)
+                                console.log(task.initiator)
                                 return
                             }
                             var middle: number = targetMoney
@@ -536,6 +568,7 @@ nextApp.prepare().then(async() => {
                             var initiatorMoney = await db.getPlayerMoney(gameName, task.initiator)
                             var targetMoney = await db.getPlayerMoney(gameName, task.target)
                             if (targetMoney == null || initiatorMoney == null) {
+                                console.log("[ERROR][10][" + gameName + "] items null at do nohing")
                                 return
                             }
                             targetMoney += initiatorMoney
@@ -554,13 +587,13 @@ nextApp.prepare().then(async() => {
                             var data = {"title": "You killed " + task.initiator}
                             io.in(gameName + task.target).emit("event", data)
                         } else if (task.type == "Skull and Crossbones") {
-                            //scull and crossbones
-                            return
+                            console.log("[ERROR][11][" + gameName + "] Team task not implemented")
                         } else if (task.type == "Swap") {
                             //swap
                             var initiatorMoney = await db.getPlayerMoney(gameName, task.initiator)
                             var targetMoney = await db.getPlayerMoney(gameName, task.target)
                             if (targetMoney == null || initiatorMoney == null) {
+                                console.log("[ERROR][12][" + gameName + "] items null")
                                 return
                             }
                             var middle: number = targetMoney
@@ -580,10 +613,11 @@ nextApp.prepare().then(async() => {
                     if (task.mirrored % 2 == 0) {
                         var shield = await db.getPlayerShield(gameName, task.target)
                         if (shield == null) {
+                            console.log("[ERROR][13][" + gameName + "] items null")
                             return
                         }
                         shield -= 1
-                        db.setPlayerShield(gameName, task.target, shield)
+                        await db.setPlayerShield(gameName, task.target, shield)
 
                         var data = {"title": "You used a shield to block " + task.initiator}
                         io.in(gameName + task.target).emit("event", data)
@@ -593,7 +627,9 @@ nextApp.prepare().then(async() => {
 
                     } else {
                         var shield = await db.getPlayerShield(gameName, task.initiator)
+
                         if (shield == null) {
+                            console.log("[ERROR][14][" + gameName + "] items null")
                             return
                         }
                         shield -= 1
@@ -612,6 +648,8 @@ nextApp.prepare().then(async() => {
                     if (task.mirrored % 2 == 0) {
                         var mirror = await db.getPlayerMirror(gameName, task.initiator)
                         if (mirror == null) {
+                            console.log("[ERROR][15][" + gameName + "] items null")
+                                console.log(task.initiator)
                             return
                         }
                         mirror -= 1
@@ -626,6 +664,8 @@ nextApp.prepare().then(async() => {
                         var mirror = await db.getPlayerMirror(gameName, task.target)
                         var shield = await db.getPlayerShield(gameName, task.target)
                         if (mirror == null || shield == null) {
+                            console.log("[ERROR][16][" + gameName + "] items null")
+                            console.log(task.target)
                             return
                         }
                         if (mirror > 0) {
@@ -654,6 +694,8 @@ nextApp.prepare().then(async() => {
                     } else {
                         var mirror = await db.getPlayerMirror(gameName, task.target)
                         if (mirror == null) {
+                            console.log("[ERROR][17][" + gameName + "] items null")
+                            console.log(task.target)
                             return
                         }
                         mirror -= 1
@@ -668,6 +710,8 @@ nextApp.prepare().then(async() => {
                         var mirror = await db.getPlayerMirror(gameName, task.initiator)
                         var shield = await db.getPlayerShield(gameName, task.initiator)
                         if (mirror == null || shield == null) {
+                            console.log("[ERROR][18][" + gameName + "] items null")
+                            console.log(task.initiator)
                             return
                         }
                         if (mirror > 0) {
@@ -711,7 +755,8 @@ nextApp.prepare().then(async() => {
                     var mirror = await db.getPlayerMirror(gameName, task.target)
                     var shield = await db.getPlayerShield(gameName, task.target)
                     if (mirror == null || shield == null) {
-                        console.log("mirror or shield null")
+                        console.log("[ERROR][19][" + gameName + "] items null")
+                        console.log(task.target)
                         return
                     }
                     if (mirror > 0) {
@@ -766,11 +811,13 @@ nextApp.prepare().then(async() => {
         setTimeout(function (){
             gameLoop(gameName)
         }, 5000);
+        return
     }
 
     const addToQueue = async (gameName: string, element: object) => {
         var queue = await db.getGameQueue(gameName) as object[]
         if (queue == null || queue == undefined) {
+            console.log("[ERROR][20][" + gameName + "] items null")
             return
         }
         queue.push(element)
@@ -779,9 +826,24 @@ nextApp.prepare().then(async() => {
         return
     }
 
+    const addToTileQueue = async (gameName: string, element: object) => {
+        console.log("adding to tile queue")
+        var TileQueue = await db.getGameTileQueue(gameName) as object[]
+
+        if (TileQueue == null || TileQueue == undefined) {
+            console.log("[ERROR][21][" + gameName + "] items null")
+            return
+        }
+        TileQueue.push(element)
+
+        await db.setGameTileQueue(gameName, TileQueue)
+        return
+    }
+
     const addToScoreHistory = async (gameName: string, turnNumber: number, element: object) => {
         var score = await db.getGameScoreHistory(gameName) as object[]
         if (score == null || score == undefined) {
+            console.log("[ERROR][22][" + gameName + "] items null")
             return
         }
         score[turnNumber] = element

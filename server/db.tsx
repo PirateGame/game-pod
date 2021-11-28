@@ -1,5 +1,5 @@
 //This should be .jsx for server and nothing for dev
-import prisma from "../lib/prisma.jsx"
+import prisma from "../lib/prisma"
 
 export class dbInteraction {
     async getPlayerID(gameName: string, playerName: string) {
@@ -183,6 +183,30 @@ export class dbInteraction {
             },
             data: {
                 queue: queue,
+            }
+        })
+        return update
+    }
+
+    async getGameTileQueue(gameName: string) {
+        var result = await prisma.game.findMany({
+            where: {
+                name: gameName,
+            },
+            select: {
+                tileQueue: true,
+            }
+        })
+        return result[0].tileQueue
+    }
+
+    async setGameTileQueue(gameName: string, tileQueue: object){
+        var update = await prisma.game.updateMany({
+            where: {
+                name: gameName,
+            },
+            data: {
+                tileQueue: tileQueue,
             }
         })
         return update
