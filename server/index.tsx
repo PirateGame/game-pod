@@ -243,10 +243,9 @@ nextApp.prepare().then(async() => {
                 console.log("[INFO]][" + gameName + "] Finished")
                 return
             } else {
-                var tileQueue = await db.getGameQueue(gameName) as object[]
+                var tileQueue = await db.getGameTileQueue(gameName) as object[]
                 var tilesRemaining: number[] = await db.getGameTilesRemaining(gameName)
                 var currentTile: number
-
                 if (tileQueue.length > 0) {
                     //tile in queue
                     console.log("using tile from queue")
@@ -422,7 +421,7 @@ nextApp.prepare().then(async() => {
                                     response: undefined,
                                     emitted: false,
                                     options: tilesRemaining.map(String),
-                                    target: "false",
+                                    target: "",
                                     mirrored: 0,
                                     shielded: false,
                                 }
