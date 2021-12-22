@@ -5,7 +5,7 @@ import next, { NextApiHandler } from 'next';
 import * as socketio from 'socket.io';
 
 //This should be .jsx for server and empty for dev env
-import { dbInteraction } from './db.jsx';
+import { dbInteraction } from './db';
 var jwt=require('jsonwebtoken');
 
 let db = new dbInteraction();
@@ -60,7 +60,7 @@ nextApp.prepare().then(async() => {
             connects client to room.
         */
 
-        socket.on("Register", async (playerName: string, gameName: string,callback: any) => {
+        socket.on("Register", async (gameName: string, playerName: string,callback: any) => {
             if(playerName == null || gameName == null) {
                 console.log("no parameters")
                 socket.disconnect()
@@ -80,7 +80,7 @@ nextApp.prepare().then(async() => {
             }
         })
 
-        socket.on("join", async (playerName: string, gameName: string, token: any, callback: any) => {
+        socket.on("join", async (gameName: string, playerName: string, token: any, callback: any) => {
             if ( token == await db.getToken(gameName, playerName)) {
                 socket.join(gameName)
                 socket.join(gameName + playerName)
@@ -96,7 +96,7 @@ nextApp.prepare().then(async() => {
             }
         })
 
-        socket.on("getPlayerList", async (playerName, gameName, callback: any) => {
+        socket.on("getPlayerList", async (gameName, playerName, callback: any) => {
             var playerList = await db.getPlayerlist(gameName)
             console.log("[INFO][" + gameName + "][" + playerName + "] get player list ")
             callback({
@@ -105,7 +105,7 @@ nextApp.prepare().then(async() => {
             })
         })
 
-        socket.on("submitBoard", async (playerName, gameName, board, callback: any) => {
+        socket.on("submitBoard", async (gameName,playerName, board, callback: any) => {
             await db.setBoard(gameName, playerName, board)
             console.log("[INFO][" + gameName + "][" + playerName + "] set Board ")
             gameReady(gameName)
@@ -114,7 +114,7 @@ nextApp.prepare().then(async() => {
             })
         })
 
-        socket.on("setTeam", async (playerName, gameName, ship, captain, callback: any) => {
+        socket.on("setTeam", async (gameName, playerName, ship, captain, callback: any) => {
             await db.setTeam(gameName, playerName, ship, captain)
             console.log("[INFO][" + gameName + "][" + playerName + "] set Team ")
             callback({
@@ -122,23 +122,31 @@ nextApp.prepare().then(async() => {
             })
         })
 
-        socket.on("addAI", (playerName, gameName, token, callback: any) => {
+        socket.on("addAI", async (gameName, playerName, token, callback: any) => {
             token = token
             playerName = playerName
             console.log("[INFO][" + gameName + "][" + playerName + "] added AI")
-            callback({
-                status: "not implemented"
-            })
+            if(await db.addAI(gameName)) {
+                socket.to(gameName).emit('playerListUpdated')
+                callback({
+                    status: "AI Player Added"
+                })
+            } else {
+                callback({
+                    status: "Max number of AI players reached."
+                })
+            }
+            
         })
 
-        socket.on("startGame", (playerName, gameName, token) => {
+        socket.on("startGame", (gameName, playerName, token) => {
             token = token
             playerName = playerName
             console.log("[INFO][" + gameName + "][" + playerName + "] started game")
             start(gameName)
         })
 
-        socket.on("questionResponse", async(playerName, gameName, option) => {
+        socket.on("questionResponse", async(gameName, playerName, option) => {
             console.log("[INFO][" + gameName + "][" + playerName + "] received option.")
             
             var queue = await db.getGameQueue(gameName) as object[]
@@ -475,14 +483,25 @@ nextApp.prepare().then(async() => {
                 return
             }
             if (task.emitted == false) {
-                console.log("emitting question")
-                io.in(gameName + task.responder).emit("question",task.title, task.options)
-                task.emitted = true
-                
-                task.timeout = Date.now() + decisionTime
+                if(await db.getPlayerType(gameName, task.responder)) {
+                    //AI
+                    task.emitted = true
+                    task.response = task.options[Math.floor(Math.random()*task.options.length)];
+                    task.timeout = Date.now() + 1000
 
-                queue.unshift(task)
-                await db.setGameQueue(gameName, queue)
+                    queue.unshift(task)
+                    await db.setGameQueue(gameName, queue)
+                } else {
+                    //human
+                    console.log("emitting question")
+                    io.in(gameName + task.responder).emit("question",task.title, task.options)
+                    task.emitted = true
+                    
+                    task.timeout = Date.now() + decisionTime
+
+                    queue.unshift(task)
+                    await db.setGameQueue(gameName, queue)
+                }
                 
             } else if (task.response != null){
                 //we have an answer.

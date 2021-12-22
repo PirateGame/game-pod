@@ -1,5 +1,5 @@
 //This should be .jsx for server and nothing for dev
-import prisma from "../lib/prisma.jsx"
+import prisma from "../lib/prisma"
 
 export class dbInteraction {
     async getPlayerID(gameName: string, playerName: string) {
@@ -309,6 +309,18 @@ export class dbInteraction {
         return res.tilesRemaining
     }
 
+    async getGameTiles(gameName: string) {
+        var res: any = await prisma.game.findFirst({
+            where: {
+                name: gameName,
+            },
+            select: {
+                tiles: true,
+            }
+        })
+        return res.tiles
+    }
+
     async getGameState(gameName: string) {
         var res: any = await prisma.game.findFirst({
             where: {
@@ -435,5 +447,105 @@ export class dbInteraction {
             }
         })
         return update
+    }
+
+    async findUniqueName(gameName: string, playerName: string){
+        var result = await prisma.player.findFirst({
+            where: {
+                gameName: gameName,
+                name: playerName
+            },
+            select: {
+                name: true
+            }
+        })
+        return result
+    }
+
+    async addAI(gameName: string) {
+        var names = ["one", "two", "three"]
+        var playerName = names[Math.floor(Math.random()*names.length)];
+        while (await this.findUniqueName(gameName, playerName) != null) {
+            names.splice (names.indexOf(playerName), 1);
+            if (names.length == 0) {
+                console.log("[ERROR][" + gameName + "] run out of AI Names")
+                return false
+            }
+            playerName = names[Math.floor(Math.random()*names.length)];
+        }
+        var ships = [0,1,2]
+        var captains = [0,1,2]
+        var ship = ships[Math.floor(Math.random()*ships.length)]
+        var captain = captains[Math.floor(Math.random()*captains.length)]
+
+        var gridWidth = await this.getGameSizeX(gameName)
+        var gridHeight = await this.getGameSizeY(gameName)
+        var positionValues: any = []
+        var board: any = []
+        var tiles = await this.getGameTiles(gameName)
+        console.log(tiles)
+
+        for (var x = 0; x < gridWidth; x++){
+            for (var y = 0; y < gridHeight; y++){
+                positionValues.push([x,y])
+            }
+        }
+
+        for (var [key, value] of Object.entries(tiles)) {
+            value = value as number
+            //@ts-ignore value is unknown and I can't work out how to tell TS that it is a number
+            for ( var i = 0; i < value; i++){
+                var content = key.toString()
+
+                //chose position from list
+                var index = Math.floor(Math.random() * positionValues.length)
+                var x: number = positionValues[index][0]
+                var y: number = positionValues[index][1]
+                //remove chosen position from list
+                positionValues.splice(index, 1)
+
+                board.push({"x":x, "y":y, "content":content, "id": (y)*gridWidth + (x) })
+            }
+        }
+
+
+        var result = await prisma.player.create({
+            data: {
+                name: playerName,
+                money: 0,
+                bank: 0,
+                board: board,
+                shield: 0,
+                mirror: 0,
+                ship: ship,
+                captain: captain,
+                host: false,
+                ai: true,
+                token: "",
+                game: {
+                    connect: {name: gameName}
+                }
+    
+            }
+        })
+        return result
+        
+        //this is where we need to start the kubernetes pod
+    }
+
+    async getPlayerType(gameName: string, playerName: string){
+        var result = await prisma.player.findFirst({
+            where: {
+                gameName: gameName,
+                name: playerName
+            },
+            select: {
+                ai: true
+            }
+        })
+        if (result == null) {
+            return
+        }
+        return result.ai
     }
 }
