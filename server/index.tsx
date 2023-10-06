@@ -5,8 +5,8 @@ import next, { NextApiHandler } from 'next';
 import * as socketio from 'socket.io';
 
 //This should be .jsx for server and empty for dev env
-import { dbInteraction } from './db.jsx';
-var jwt=require('jsonwebtoken');
+import { dbInteraction } from './db';
+var jwt = require('jsonwebtoken');
 
 let db = new dbInteraction();
 
@@ -41,7 +41,7 @@ const dev: boolean = process.env.NODE_ENV !== 'production';
 const nextApp = next({ dev });
 const nextHandler: NextApiHandler = nextApp.getRequestHandler();
 
-nextApp.prepare().then(async() => {
+nextApp.prepare().then(async () => {
     const app: Express = express();
     const server: http.Server = http.createServer(app);
     const io: socketio.Server = new socketio.Server();
@@ -60,28 +60,29 @@ nextApp.prepare().then(async() => {
             connects client to room.
         */
 
-        socket.on("Register", async (gameName: string, playerName: string,callback: any) => {
-            if(playerName == null || gameName == null) {
+        socket.on("Register", async (gameName: string, playerName: string, callback: any) => {
+            if (playerName == null || gameName == null) {
                 console.log("no parameters")
                 socket.disconnect()
-            }
-            var token = jwt.sign({ playerName: playerName }, process.env.JSON_SECRET);
-            if (await db.setToken(gameName, playerName, token) == false){
-                console.log("set token failed")
-                socket.disconnect()
             } else {
-                //here we can assume that a new player has joined a game so they can update their player list.
-                socket.to(gameName).emit('playerListUpdated')
-                socket.join(gameName)
-                console.log("[INFO][" + gameName + "][" + playerName + "] registered ")
-                callback({
-                    token: token
-                })
+                var token = jwt.sign({ playerName: playerName }, process.env.JSON_SECRET);
+                if (await db.setToken(gameName, playerName, token) == false) {
+                    console.log("set token failed")
+                    socket.disconnect()
+                } else {
+                    //here we can assume that a new player has joined a game so they can update their player list.
+                    socket.to(gameName).emit('playerListUpdated')
+                    socket.join(gameName)
+                    console.log("[INFO][" + gameName + "][" + playerName + "] registered ")
+                    callback({
+                        token: token
+                    })
+                }
             }
         })
 
         socket.on("join", async (gameName: string, playerName: string, token: any, callback: any) => {
-            if ( token == await db.getToken(gameName, playerName)) {
+            if (token == await db.getToken(gameName, playerName)) {
                 socket.join(gameName)
                 socket.join(gameName + playerName)
                 console.log("[INFO][" + gameName + "][" + playerName + "] Connected to room ")
@@ -105,7 +106,7 @@ nextApp.prepare().then(async() => {
             })
         })
 
-        socket.on("submitBoard", async (gameName,playerName, board, callback: any) => {
+        socket.on("submitBoard", async (gameName, playerName, board, callback: any) => {
             await db.setBoard(gameName, playerName, board)
             console.log("[INFO][" + gameName + "][" + playerName + "] set Board ")
             gameReady(gameName)
@@ -126,7 +127,7 @@ nextApp.prepare().then(async() => {
             token = token
             playerName = playerName
             console.log("[INFO][" + gameName + "][" + playerName + "] added AI")
-            if(await db.addAI(gameName)) {
+            if (await db.addAI(gameName)) {
                 socket.to(gameName).emit('playerListUpdated')
                 callback({
                     status: "AI Player Added"
@@ -136,7 +137,7 @@ nextApp.prepare().then(async() => {
                     status: "Max number of AI players reached."
                 })
             }
-            
+
         })
 
         socket.on("startGame", (gameName, playerName, token) => {
@@ -146,9 +147,9 @@ nextApp.prepare().then(async() => {
             start(gameName)
         })
 
-        socket.on("questionResponse", async(gameName, playerName, option) => {
+        socket.on("questionResponse", async (gameName, playerName, option) => {
             console.log("[INFO][" + gameName + "][" + playerName + "] received option.")
-            
+
             var queue = await db.getGameQueue(gameName) as object[]
 
             for (var i in queue) {
@@ -167,31 +168,31 @@ nextApp.prepare().then(async() => {
 
         })
 
-        
+
     });
 
     app.all('*', (req: any, res: any) => nextHandler(req, res));
 
     server.listen(port, () => {
         console.log(`> Ready on http://localhost:${port}`);
-    });    
+    });
 
-    const gameReady = async(gameName: string) => {
+    const gameReady = async (gameName: string) => {
         var ready = true
-        await db.getPlayerlist(gameName).then(async(playerList) => {
-            for (var player = 0;  player < playerList.length; player ++){
+        await db.getPlayerlist(gameName).then(async (playerList) => {
+            for (var player = 0; player < playerList.length; player++) {
                 await db.getPlayerBoard(gameName, playerList[player]).then((board) => {
                     if (board == null) {
                         return
                     }
-                    if (board == 0){
+                    if (board == 0) {
                         ready = false
                     }
                 })
             }
-            if(ready){
+            if (ready) {
                 db.setGameState(gameName, 1)
-                
+
                 io.in(gameName).emit("gameStateUpdate", 1)
             }
         })
@@ -202,16 +203,16 @@ nextApp.prepare().then(async() => {
         io.in(gameName).emit("gameStart")
         db.setGameTurnNumber(gameName, 1)
         db.setGameState(gameName, 2)
-        setTimeout(function (){
+        setTimeout(function () {
             //allow clients to move to next page.
             gameLoop(gameName)
         }, 10000);
     }
 
-    const gameLoop = async(gameName: string) => {
+    const gameLoop = async (gameName: string) => {
         var playerList = await db.getPlayerlist(gameName)
         //if playerlist empty assume game has been deleted. so stop
-        if(playerList == []) {
+        if (playerList.length < 1) {
             console.log("[WARN][" + gameName + "] Appears to have been deleted")
             return
         }
@@ -246,7 +247,7 @@ nextApp.prepare().then(async() => {
             await db.setGameTurn(gameName, turn)
             var maxTurns = await db.getGameSizeX(gameName) * await db.getGameSizeY(gameName)
             if (turn > maxTurns + 1) { //need to do the last turn.
-                var data = {"title": "Game Over."}
+                var data = { "title": "Game Over." }
                 io.in(gameName).emit("event", data)
                 console.log("[INFO]][" + gameName + "] Finished")
                 return
@@ -276,9 +277,9 @@ nextApp.prepare().then(async() => {
 
                     await db.setGameTilesRemaining(gameName, tilesRemaining)
                 }
-                
+
                 console.log("[Info][" + gameName + "] " + currentTile)
-               
+
 
                 await db.setGameCurrentTile(gameName, currentTile)
 
@@ -287,7 +288,7 @@ nextApp.prepare().then(async() => {
                     if (board == null || board == undefined) {
                         console.log("[ERROR][3][" + gameName + "][" + playerList[i] + "] Board Not found")
                     }
-                    for (var tile = 0; tile < board.length; tile ++) {
+                    for (var tile = 0; tile < board.length; tile++) {
                         if (board[tile].id == currentTile) {
                             //from here
                             var money = await db.getPlayerMoney(gameName, playerList[i])
@@ -297,7 +298,7 @@ nextApp.prepare().then(async() => {
 
                             var enemyList = JSON.parse(JSON.stringify(playerList))
 
-                            enemyList.splice(i,1)
+                            enemyList.splice(i, 1)
 
 
                             if (money == undefined || bank == undefined || shield == undefined || mirror == undefined) {
@@ -309,26 +310,26 @@ nextApp.prepare().then(async() => {
                             if (board[tile].content == "5000") {
                                 money += 5000
                                 await db.setPlayerMoney(gameName, playerList[i], money)
-                                var data = {"title": "You got 5000 Gold Coins"}
+                                var data = { "title": "You got 5000 Gold Coins" }
                                 io.in(gameName + playerList[i]).emit("event", data)
                             } else if (board[tile].content == "3000") {
                                 money += 3000
                                 await db.setPlayerMoney(gameName, playerList[i], money)
-                                var data = {"title": "You got 3000 Gold Coins"}
+                                var data = { "title": "You got 3000 Gold Coins" }
                                 io.in(gameName + playerList[i]).emit("event", data)
                             } else if (board[tile].content == "1000") {
                                 money += 1000
                                 await db.setPlayerMoney(gameName, playerList[i], money)
-                                var data = {"title": "You got 1000 Gold Coins"}
+                                var data = { "title": "You got 1000 Gold Coins" }
                                 io.in(gameName + playerList[i]).emit("event", data)
                             } else if (board[tile].content == "200") {
                                 money += 200
                                 await db.setPlayerMoney(gameName, playerList[i], money)
-                                var data = {"title": "You got 200 Gold Coins"}
+                                var data = { "title": "You got 200 Gold Coins" }
                                 io.in(gameName + playerList[i]).emit("event", data)
-                            } else if (board[tile].content == "Steal"){
+                            } else if (board[tile].content == "Steal") {
                                 //Rob
-                                var data = {"title": "You get to steal from someone this turn"}
+                                var data = { "title": "You get to steal from someone this turn" }
                                 io.in(gameName + playerList[i]).emit("event", data)
                                 var job: task = {
                                     initiator: playerList[i],
@@ -345,9 +346,9 @@ nextApp.prepare().then(async() => {
                                 }
 
                                 addToQueue(gameName, job)
-                            } else if (board[tile].content == "Kill"){
+                            } else if (board[tile].content == "Kill") {
                                 //Kill
-                                var data = {"title": "You get to kill someone this turn"}
+                                var data = { "title": "You get to kill someone this turn" }
                                 io.in(gameName + playerList[i]).emit("event", data)
                                 var job: task = {
                                     initiator: playerList[i],
@@ -363,9 +364,9 @@ nextApp.prepare().then(async() => {
                                     options: enemyList
                                 }
                                 addToQueue(gameName, job)
-                            } else if (board[tile].content == "Present"){
+                            } else if (board[tile].content == "Present") {
                                 //Present
-                                var data = {"title": "You get to give a present someone this turn"}
+                                var data = { "title": "You get to give a present someone this turn" }
                                 io.in(gameName + playerList[i]).emit("event", data)
                                 var job: task = {
                                     initiator: playerList[i],
@@ -381,9 +382,9 @@ nextApp.prepare().then(async() => {
                                     options: enemyList
                                 }
                                 addToQueue(gameName, job)
-                            } else if (board[tile].content == "Skull and Crossbones"){
+                            } else if (board[tile].content == "Skull and Crossbones") {
                                 //Skull and Crossbones
-                                var data = {"title": "Skull and cross bones not implemented"}
+                                var data = { "title": "Skull and cross bones not implemented" }
                                 io.in(gameName + playerList[i]).emit("event", data)
                                 // addToQueue(gameName, {
                                 //     playerName: playerList[i],
@@ -397,9 +398,9 @@ nextApp.prepare().then(async() => {
                                 //     emitted: false,
                                 //     options: ["1", "2", "3", "A", "B", "C"]
                                 // })
-                            } else if (board[tile].content == "Swap"){
+                            } else if (board[tile].content == "Swap") {
                                 //Swap
-                                var data = {"title": "You get to swap with someone this turn"}
+                                var data = { "title": "You get to swap with someone this turn" }
                                 io.in(gameName + playerList[i]).emit("event", data)
                                 var job: task = {
                                     initiator: playerList[i],
@@ -415,11 +416,11 @@ nextApp.prepare().then(async() => {
                                     options: enemyList
                                 }
                                 addToQueue(gameName, job)
-                            } else if (board[tile].content == "Choose Next Tile"){
+                            } else if (board[tile].content == "Choose Next Tile") {
                                 //Choose next tile
-                                var data = {"title": "You get to choose the next tile"}
+                                var data = { "title": "You get to choose the next tile" }
                                 io.in(gameName + playerList[i]).emit("event", data)
-                                
+
                                 var job: task = {
                                     initiator: playerList[i],
                                     responder: playerList[i],
@@ -434,37 +435,37 @@ nextApp.prepare().then(async() => {
                                     shielded: false,
                                 }
                                 addToQueue(gameName, job)
-                            } else if (board[tile].content == "Shield"){
+                            } else if (board[tile].content == "Shield") {
                                 //Shield
                                 shield += 1
                                 await db.setPlayerShield(gameName, playerList[i], shield)
-                                var data = {"title": "You got a Shield"}
+                                var data = { "title": "You got a Shield" }
                                 io.in(gameName + playerList[i]).emit("event", data)
-                            } else if (board[tile].content == "Mirror"){
+                            } else if (board[tile].content == "Mirror") {
                                 //Mirror
                                 mirror += 1
                                 await db.setPlayerMirror(gameName, playerList[i], mirror)
-                                var data = {"title": "You got a mirror"}
+                                var data = { "title": "You got a mirror" }
                                 io.in(gameName + playerList[i]).emit("event", data)
-                            } else if (board[tile].content == "Bomb"){
+                            } else if (board[tile].content == "Bomb") {
                                 //Bomb
                                 money = 0
                                 await db.setPlayerMoney(gameName, playerList[i], money)
-                                var data = {"title": "You got Bombed! You lost all your stash"}
+                                var data = { "title": "You got Bombed! You lost all your stash" }
                                 io.in(gameName + playerList[i]).emit("event", data)
-                            } else if (board[tile].content == "Double"){
+                            } else if (board[tile].content == "Double") {
                                 //Double
                                 money = money * 2
                                 await db.setPlayerMoney(gameName, playerList[i], money)
-                                var data = {"title": "You Doubled your stash"}
+                                var data = { "title": "You Doubled your stash" }
                                 io.in(gameName + playerList[i]).emit("event", data)
-                            } else if (board[tile].content == "Bank"){
+                            } else if (board[tile].content == "Bank") {
                                 //Bank
                                 bank += money
                                 money = 0
                                 await db.setPlayerMoney(gameName, playerList[i], money)
                                 await db.setPlayerBank(gameName, playerList[i], bank)
-                                var data = {"title": "Your stash has been saved to the chest."}
+                                var data = { "title": "Your stash has been saved to the chest." }
                                 io.in(gameName + playerList[i]).emit("event", data)
                             }
                         }
@@ -478,15 +479,15 @@ nextApp.prepare().then(async() => {
             queue.shift()
             await db.setGameQueue(gameName, queue)
 
-            if(task.timeout == null || task.options == null || task.mirrored == null || task.initiator == null || task.target == null) {
+            if (task.timeout == null || task.options == null || task.mirrored == null || task.initiator == null || task.target == null) {
                 console.log("[ERROR][5][" + gameName + "] + task did not have all data")
                 return
             }
             if (task.emitted == false) {
-                if(await db.getPlayerType(gameName, task.responder)) {
+                if (await db.getPlayerType(gameName, task.responder)) {
                     //AI
                     task.emitted = true
-                    task.response = task.options[Math.floor(Math.random()*task.options.length)];
+                    task.response = task.options[Math.floor(Math.random() * task.options.length)];
                     task.timeout = Date.now() + 1000
 
                     queue.unshift(task)
@@ -494,16 +495,16 @@ nextApp.prepare().then(async() => {
                 } else {
                     //human
                     console.log("emitting question")
-                    io.in(gameName + task.responder).emit("question",task.title, task.options)
+                    io.in(gameName + task.responder).emit("question", task.title, task.options)
                     task.emitted = true
-                    
+
                     task.timeout = Date.now() + decisionTime
 
                     queue.unshift(task)
                     await db.setGameQueue(gameName, queue)
                 }
-                
-            } else if (task.response != null){
+
+            } else if (task.response != null) {
                 //we have an answer.
                 if (task.type == "Present") {
                     //Present
@@ -515,14 +516,14 @@ nextApp.prepare().then(async() => {
                     }
                     money += 1000
                     await db.setPlayerMoney(gameName, task.response, money)
-                    var data = {"title": "You gave a present to " + task.response}
+                    var data = { "title": "You gave a present to " + task.response }
                     io.in(gameName + task.initiator).emit("event", data)
-                    var data = {"title": "You got a present from " + task.initiator}
+                    var data = { "title": "You got a present from " + task.initiator }
                     io.in(gameName + task.response).emit("event", data)
 
                 } else if (task.type == "Choose Next Tile") {
                     console.log("adding tile to queue")
-                    await addToTileQueue(gameName, {tile: parseInt(task.response)})
+                    await addToTileQueue(gameName, { tile: parseInt(task.response) })
                     var tilesRemaining: number[] = await db.getGameTilesRemaining(gameName)
                     tilesRemaining.splice(tilesRemaining.indexOf(parseInt(task.response)), 1)
 
@@ -545,16 +546,16 @@ nextApp.prepare().then(async() => {
                             targetMoney = 0
                             await db.setPlayerMoney(gameName, task.initiator, initiatorMoney)
                             await db.setPlayerMoney(gameName, task.target, targetMoney)
-                            var data = {"title": "You robbed " + task.target}
+                            var data = { "title": "You robbed " + task.target }
                             io.in(gameName + task.initiator).emit("event", data)
-                            var data = {"title": "You were robbed by " + task.initiator}
+                            var data = { "title": "You were robbed by " + task.initiator }
                             io.in(gameName + task.target).emit("event", data)
                         } else if (task.type == "Kill") {
                             //kill
                             await db.setPlayerMoney(gameName, task.target, 0)
-                            var data = {"title": "You killed " + task.target}
+                            var data = { "title": "You killed " + task.target }
                             io.in(gameName + task.initiator).emit("event", data)
-                            var data = {"title": "You were killed by " + task.initiator}
+                            var data = { "title": "You were killed by " + task.initiator }
                             io.in(gameName + task.target).emit("event", data)
                         } else if (task.type == "Skull and Crossbones") {
                             //skull and crossbones
@@ -574,9 +575,9 @@ nextApp.prepare().then(async() => {
                             initiatorMoney = middle
                             await db.setPlayerMoney(gameName, task.initiator, initiatorMoney)
                             await db.setPlayerMoney(gameName, task.target, targetMoney)
-                            var data = {"title": "You swapped with " + task.target}
+                            var data = { "title": "You swapped with " + task.target }
                             io.in(gameName + task.initiator).emit("event", data)
-                            var data = {"title": "You swapped with " + task.initiator}
+                            var data = { "title": "You swapped with " + task.initiator }
                             io.in(gameName + task.target).emit("event", data)
                         }
                     } else {
@@ -593,16 +594,16 @@ nextApp.prepare().then(async() => {
                             initiatorMoney = 0
                             await db.setPlayerMoney(gameName, task.initiator, initiatorMoney)
                             await db.setPlayerMoney(gameName, task.target, targetMoney)
-                            var data = {"title": "You were robbed by " + task.target}
+                            var data = { "title": "You were robbed by " + task.target }
                             io.in(gameName + task.initiator).emit("event", data)
-                            var data = {"title": "You robbed " + task.initiator}
+                            var data = { "title": "You robbed " + task.initiator }
                             io.in(gameName + task.target).emit("event", data)
                         } else if (task.type == "Kill") {
                             //kill
                             await db.setPlayerMoney(gameName, task.initiator, 0)
-                            var data = {"title": "You were killed by " + task.target}
+                            var data = { "title": "You were killed by " + task.target }
                             io.in(gameName + task.initiator).emit("event", data)
-                            var data = {"title": "You killed " + task.initiator}
+                            var data = { "title": "You killed " + task.initiator }
                             io.in(gameName + task.target).emit("event", data)
                         } else if (task.type == "Skull and Crossbones") {
                             console.log("[ERROR][11][" + gameName + "] Team task not implemented")
@@ -619,9 +620,9 @@ nextApp.prepare().then(async() => {
                             initiatorMoney = middle
                             await db.setPlayerMoney(gameName, task.initiator, initiatorMoney)
                             await db.setPlayerMoney(gameName, task.target, targetMoney)
-                            var data = {"title": "You swapped with " + task.target}
+                            var data = { "title": "You swapped with " + task.target }
                             io.in(gameName + task.initiator).emit("event", data)
-                            var data = {"title": "You swapped with " + task.initiator}
+                            var data = { "title": "You swapped with " + task.initiator }
                             io.in(gameName + task.target).emit("event", data)
                         }
                     }
@@ -637,9 +638,9 @@ nextApp.prepare().then(async() => {
                         shield -= 1
                         await db.setPlayerShield(gameName, task.target, shield)
 
-                        var data = {"title": "You used a shield to block " + task.initiator}
+                        var data = { "title": "You used a shield to block " + task.initiator }
                         io.in(gameName + task.target).emit("event", data)
-                        var data = {"title": task.target + " blocked the attack with a shield"}
+                        var data = { "title": task.target + " blocked the attack with a shield" }
                         io.in(gameName + task.initiator).emit("event", data)
 
 
@@ -653,9 +654,9 @@ nextApp.prepare().then(async() => {
                         shield -= 1
                         db.setPlayerShield(gameName, task.initiator, shield)
 
-                        var data = {"title": "You used a shield to block " + task.target}
+                        var data = { "title": "You used a shield to block " + task.target }
                         io.in(gameName + task.initiator).emit("event", data)
-                        var data = {"title": task.initiator + " blocked the attack with a shield"}
+                        var data = { "title": task.initiator + " blocked the attack with a shield" }
                         io.in(gameName + task.target).emit("event", data)
 
 
@@ -667,15 +668,15 @@ nextApp.prepare().then(async() => {
                         var mirror = await db.getPlayerMirror(gameName, task.initiator)
                         if (mirror == null) {
                             console.log("[ERROR][15][" + gameName + "] items null")
-                                console.log(task.initiator)
+                            console.log(task.initiator)
                             return
                         }
                         mirror -= 1
                         db.setPlayerMirror(gameName, task.initiator, mirror)
 
-                        var data = {"title": "You used a mirror to reflect " + task.target}
+                        var data = { "title": "You used a mirror to reflect " + task.target }
                         io.in(gameName + task.initiator).emit("event", data)
-                        var data = {"title": task.initiator + " reflected the attack back at you with a mirror"}
+                        var data = { "title": task.initiator + " reflected the attack back at you with a mirror" }
                         io.in(gameName + task.target).emit("event", data)
 
                         var options = ["Do Nothing"]
@@ -719,9 +720,9 @@ nextApp.prepare().then(async() => {
                         mirror -= 1
                         db.setPlayerMirror(gameName, task.target, mirror)
 
-                        var data = {"title": "You used a mirror to reflect " + task.initiator}
+                        var data = { "title": "You used a mirror to reflect " + task.initiator }
                         io.in(gameName + task.target).emit("event", data)
-                        var data = {"title": task.target + " reflected the attack back at you with a mirror"}
+                        var data = { "title": task.target + " reflected the attack back at you with a mirror" }
                         io.in(gameName + task.initiator).emit("event", data)
 
                         var options = ["Do Nothing"]
@@ -758,15 +759,15 @@ nextApp.prepare().then(async() => {
                 } else {
                     //assume that this is after the first question and target has been selected.
                     task.target = task.response
-                    var data = {title: ""}
+                    var data = { title: "" }
                     if (task.type == "Steal") {
-                        data = {"title": task.initiator + " is trying to rob you!"}
+                        data = { "title": task.initiator + " is trying to rob you!" }
                     }
                     else if (task.type == "Kill") {
-                        data = {"title": task.initiator + " is trying to kill you!"}
+                        data = { "title": task.initiator + " is trying to kill you!" }
                     }
                     else if (task.type == "Swap") {
-                        data = {"title": task.initiator + " is trying to swap with you!"}
+                        data = { "title": task.initiator + " is trying to swap with you!" }
                     }
                     io.in(gameName + task.target).emit("event", data)
                     var options = ["Do Nothing"]
@@ -803,14 +804,14 @@ nextApp.prepare().then(async() => {
                     db.setGameQueue(gameName, queue)
                 }
 
-            } else if(task.timeout < Date.now()) {
-                data = {"title": "you didn't answer the question in time"}
+            } else if (task.timeout < Date.now()) {
+                data = { "title": "you didn't answer the question in time" }
                 io.in(gameName + task.target).emit("event", data)
                 var choice = task.options[Math.floor(Math.random() * task.options.length)]
                 task.response = choice;
                 queue.unshift(task)
                 await db.setGameQueue(gameName, queue)
-                setTimeout(function (){
+                setTimeout(function () {
                     //allow clients to move to next page.
                     gameLoop(gameName)
                 }, 1000);
@@ -820,13 +821,13 @@ nextApp.prepare().then(async() => {
                 //add task back to queue
                 queue.unshift(task)
                 await db.setGameQueue(gameName, queue)
-                setTimeout(function (){
+                setTimeout(function () {
                     gameLoop(gameName)
                 }, 5000);
                 return
             }
         }
-        setTimeout(function (){
+        setTimeout(function () {
             gameLoop(gameName)
         }, 5000);
         return
