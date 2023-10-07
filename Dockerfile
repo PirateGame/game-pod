@@ -1,4 +1,4 @@
-FROM node:16-alpine
+FROM node:16.15.1
 
 ENV PORT 1234
 ENV JSON_SECRET alongstringoftext
