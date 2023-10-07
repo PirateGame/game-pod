@@ -1,4 +1,4 @@
-FROM node:18-alpine
+FROM node:16-alpine
 
 ENV PORT 1234
 ENV DATABASE_URL mysql://example:example@127.0.0.1:3306/pg
