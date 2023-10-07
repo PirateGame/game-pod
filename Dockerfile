@@ -1,8 +1,13 @@
 FROM node:16-alpine
 
 ENV PORT 1234
-ENV DATABASE_URL mysql://example:example@127.0.0.1:3306/pg
 ENV JSON_SECRET alongstringoftext
+
+ENV DATABASE_HOST 127.0.0.1:3306
+ENV DATABASE_USER example
+ENV DATABASE_PASSWORD example
+
+ENV DATABASE_URL mysql://${DATABASE_USER}:${DATABASE_PASSWORD}@${DATABASE_HOST}/pg
 
 # Create app directory
 RUN mkdir -p /usr/src/app
