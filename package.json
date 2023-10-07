@@ -6,7 +6,7 @@
     "start": "cross-env NODE_ENV=production node dist/server/index.jsx"
   },
   "dependencies": {
-    "@prisma/client": "^3.1.1",
+    "@prisma/client": "^3.13.1",
     "@types/express": "^4.17.13",
     "cross-env": "^7.0.2",
     "dotenv": "^10.0.0",
