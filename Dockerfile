@@ -19,7 +19,8 @@ RUN npm install
 
 # Copying source files
 COPY . /usr/src/app
-
+COPY prisma ./prisma/
+RUN npx prisma generate
 # Building app
 RUN npm run build
 EXPOSE $PORT
