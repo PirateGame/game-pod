@@ -22,7 +22,6 @@ RUN npm install
 COPY . /usr/src/app
 COPY prisma ./prisma/
 RUN npx prisma generate
-RUN npx prisma db push
 # Building app
 RUN npm run build
 EXPOSE $PORT
