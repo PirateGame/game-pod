@@ -8,6 +8,8 @@ import * as socketio from 'socket.io';
 import { dbInteraction } from './db.jsx';
 var jwt = require('jsonwebtoken');
 
+console.log(process.env.DATABASE_URL)
+
 let db = new dbInteraction();
 
 interface task {
